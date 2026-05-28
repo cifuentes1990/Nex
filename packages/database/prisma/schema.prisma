@@ -1,0 +1,1279 @@
+// =====================================================================
+// NEXUS ERP — PRISMA SCHEMA
+// Enterprise SaaS/POS/ERP Database Schema
+// =====================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex", "relationJoins"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_DIRECT_URL")
+}
+
+// =====================================================================
+// ENUMS
+// =====================================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  SUPERVISOR
+  CASHIER
+  EMPLOYEE
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum BusinessType {
+  RETAIL
+  RESTAURANT
+  SERVICES
+  WHOLESALE
+  ECOMMERCE
+  HEALTHCARE
+  EDUCATION
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  STRIPE
+  MERCADOPAGO
+  PAYPAL
+  CHECK
+  CRYPTO
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY_FOR_PICKUP
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  RETURNED
+}
+
+enum SaleChannel {
+  POS
+  ONLINE
+  WHATSAPP
+  PHONE
+  MARKETPLACE
+  INSTAGRAM
+}
+
+enum DeliveryMethod {
+  PICKUP          // Recoge en tienda
+  HOME_DELIVERY   // Domicilio propio
+  COURIER         // Mensajería / paquetería
+  DIGITAL         // Entrega digital (producto digital)
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+  OUT_OF_STOCK
+  COMING_SOON
+}
+
+enum MovementType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  TRANSFER
+  RETURN
+  WASTE
+  INITIAL_STOCK
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+  ALERT
+  AI_INSIGHT
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  TRIAL
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// =====================================================================
+// ORGANIZATION / TENANT (Multinegocio)
+// =====================================================================
+
+model Organization {
+  id               String              @id @default(cuid())
+  name             String
+  slug             String              @unique
+  logo             String?
+  website          String?
+  email            String?
+  phone            String?
+  address          String?
+  city             String?
+  country          String              @default("CO")
+  timezone         String              @default("America/Bogota")
+  currency         String              @default("COP")
+  currencySymbol   String              @default("$")
+  language         String              @default("es")
+  businessType     BusinessType        @default(RETAIL)
+  taxId            String?
+  taxRate          Float               @default(0.19)
+  settings         Json                @default("{}")
+  theme            Json                @default("{}")
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  // Relations
+  branches         Branch[]
+  users            User[]
+  products         Product[]
+  categories       Category[]
+  customers        Customer[]
+  suppliers        Supplier[]
+  invoices         Invoice[]
+  orders           Order[]
+  inventory        Inventory[]
+  warehouses       Warehouse[]
+  subscription     Subscription?
+  aiConversations  AIConversation[]
+  notifications    Notification[]
+  automations      Automation[]
+  tasks            Task[]
+  webhooks         Webhook[]
+  apiKeys          APIKey[]
+  auditLogs        AuditLog[]
+  reports          SavedReport[]
+  emailCampaigns   EmailCampaign[]
+  tickets          Ticket[]
+  expenses         Expense[]
+  onlineStore      OnlineStore?
+
+  @@map("organizations")
+}
+
+// =====================================================================
+// BRANCHES (Sucursales)
+// =====================================================================
+
+model Branch {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  code           String
+  address        String?
+  city           String?
+  phone          String?
+  email          String?
+  isMain         Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  settings       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users          User[]
+  inventory      Inventory[]
+  invoices       Invoice[]
+  orders         Order[]
+  cashRegisters  CashRegister[]
+  warehouses     Warehouse[]
+
+  @@unique([organizationId, code])
+  @@map("branches")
+}
+
+// =====================================================================
+// USERS
+// =====================================================================
+
+model User {
+  id               String     @id @default(cuid())
+  organizationId   String
+  branchId         String?
+  email            String     @unique
+  emailVerified    DateTime?
+  name             String
+  avatar           String?
+  phone            String?
+  role             UserRole   @default(CASHIER)
+  status           UserStatus @default(PENDING_VERIFICATION)
+  passwordHash     String?
+  googleId         String?    @unique
+  lastLoginAt      DateTime?
+  loginCount       Int        @default(0)
+  twoFactorEnabled Boolean    @default(false)
+  twoFactorSecret  String?
+  permissions      Json       @default("[]")
+  preferences      Json       @default("{}")
+  salesGoal        Float?
+  commissionRate   Float?
+  totalSales       Float      @default(0)
+  totalCommission  Float      @default(0)
+  points           Int        @default(0)
+  rank             Int?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch           Branch?        @relation(fields: [branchId], references: [id])
+  sessions         Session[]
+  invoicesCreated  Invoice[]      @relation("InvoiceCreatedBy")
+  ordersCreated    Order[]        @relation("OrderCreatedBy")
+  aiConversations  AIConversation[]
+  notifications    Notification[]
+  tasks            Task[]
+  auditLogs        AuditLog[]
+  cashRegisters    CashRegister[]
+  passwordResets   PasswordReset[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// =====================================================================
+// PRODUCTS & INVENTORY
+// =====================================================================
+
+model Category {
+  id             String     @id @default(cuid())
+  organizationId String
+  parentId       String?
+  name           String
+  slug           String
+  description    String?
+  image          String?
+  color          String?
+  icon           String?
+  sortOrder      Int        @default(0)
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         Category?    @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children       Category[]   @relation("CategoryHierarchy")
+  products       Product[]
+
+  @@unique([organizationId, slug])
+  @@map("categories")
+}
+
+model Product {
+  id                  String        @id @default(cuid())
+  organizationId      String
+  categoryId          String?
+  supplierId          String?
+  name                String
+  slug                String
+  description         String?
+  shortDescription    String?
+  sku                 String
+  barcode             String?
+  qrCode              String?
+  image               String?
+  images              String[]      @default([])
+  status              ProductStatus @default(ACTIVE)
+  basePrice           Float
+  salePrice           Float?
+  costPrice           Float
+  margin              Float?
+  taxRate             Float?
+  taxIncluded         Boolean       @default(false)
+  trackInventory      Boolean       @default(true)
+  allowBackorder      Boolean       @default(false)
+  minStockAlert       Int           @default(5)
+  weight              Float?
+  dimensions          Json?
+  tags                String[]      @default([])
+  attributes          Json          @default("{}")
+  metadata            Json          @default("{}")
+  isDigital           Boolean       @default(false)
+  isFeatured          Boolean       @default(false)
+  sellsOnline         Boolean       @default(true)   // Visible en canal online
+  sellsInStore        Boolean       @default(true)   // Visible en POS/tienda física
+  onlinePrice         Float?                         // Precio especial online (opcional)
+  totalSold           Int           @default(0)
+  totalRevenue        Float         @default(0)
+  averageRating       Float?
+  reviewCount         Int           @default(0)
+  viewCount           Int           @default(0)
+  aiScore             Float?
+  trendScore          Float?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category            Category?        @relation(fields: [categoryId], references: [id])
+  supplier            Supplier?        @relation(fields: [supplierId], references: [id])
+  variants            ProductVariant[]
+  inventory           Inventory[]
+  orderItems          OrderItem[]
+  invoiceItems        InvoiceItem[]
+  stockMovements      StockMovement[]
+  purchaseItems       PurchaseOrderItem[]
+
+  @@unique([organizationId, sku])
+  @@map("products")
+}
+
+model ProductVariant {
+  id          String   @id @default(cuid())
+  productId   String
+  name        String
+  sku         String
+  barcode     String?
+  price       Float?
+  costPrice   Float?
+  attributes  Json     @default("{}")
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventory   Inventory[]
+
+  @@map("product_variants")
+}
+
+// =====================================================================
+// WAREHOUSES & INVENTORY
+// =====================================================================
+
+model Warehouse {
+  id             String   @id @default(cuid())
+  organizationId String
+  branchId       String?
+  name           String
+  code           String
+  address        String?
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch?         @relation(fields: [branchId], references: [id])
+  inventory      Inventory[]
+  transfersFrom  StockTransfer[] @relation("TransferFrom")
+  transfersTo    StockTransfer[] @relation("TransferTo")
+
+  @@unique([organizationId, code])
+  @@map("warehouses")
+}
+
+model Inventory {
+  id             String   @id @default(cuid())
+  organizationId String
+  branchId       String?
+  warehouseId    String?
+  productId      String
+  variantId      String?
+  quantity       Int      @default(0)
+  reservedQty    Int      @default(0)
+  availableQty   Int      @default(0)
+  minStock       Int      @default(5)
+  maxStock       Int?
+  reorderPoint   Int?
+  reorderQty     Int?
+  lastCountDate  DateTime?
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch?         @relation(fields: [branchId], references: [id])
+  warehouse      Warehouse?      @relation(fields: [warehouseId], references: [id])
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant        ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@unique([organizationId, productId, variantId, warehouseId])
+  @@map("inventory")
+}
+
+model StockMovement {
+  id             String       @id @default(cuid())
+  organizationId String
+  productId      String
+  variantId      String?
+  warehouseId    String?
+  type           MovementType
+  quantity       Int
+  previousQty    Int
+  newQty         Int
+  unitCost       Float?
+  totalCost      Float?
+  reference      String?
+  referenceId    String?
+  notes          String?
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+
+  product        Product      @relation(fields: [productId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model StockTransfer {
+  id              String   @id @default(cuid())
+  organizationId  String
+  fromWarehouseId String
+  toWarehouseId   String
+  status          String   @default("PENDING")
+  notes           String?
+  createdBy       String?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  fromWarehouse   Warehouse @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse     Warehouse @relation("TransferTo", fields: [toWarehouseId], references: [id])
+  items           StockTransferItem[]
+
+  @@map("stock_transfers")
+}
+
+model StockTransferItem {
+  id         String        @id @default(cuid())
+  transferId String
+  productId  String
+  variantId  String?
+  quantity   Int
+  createdAt  DateTime      @default(now())
+
+  transfer   StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@map("stock_transfer_items")
+}
+
+// =====================================================================
+// CUSTOMERS (CRM)
+// =====================================================================
+
+model Customer {
+  id               String   @id @default(cuid())
+  organizationId   String
+  firstName        String
+  lastName         String?
+  email            String?
+  phone            String?
+  documentType     String?
+  documentNumber   String?
+  birthDate        DateTime?
+  gender           String?
+  address          String?
+  city             String?
+  country          String?
+  avatar           String?
+  notes            String?
+  tags             String[] @default([])
+  source           String?
+  isActive         Boolean  @default(true)
+  loyaltyPoints    Int      @default(0)
+  totalSpent       Float    @default(0)
+  totalOrders      Int      @default(0)
+  averageOrderValue Float   @default(0)
+  lastPurchaseAt   DateTime?
+  riskScore        Float?
+  churnProbability Float?
+  lifetimeValue    Float?
+  segment          String?
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices         Invoice[]
+  orders           Order[]
+  interactions     CustomerInteraction[]
+
+  @@map("customers")
+}
+
+model CustomerInteraction {
+  id           String   @id @default(cuid())
+  customerId   String
+  type         String
+  channel      String?
+  subject      String?
+  content      String?
+  sentiment    String?
+  createdBy    String?
+  createdAt    DateTime @default(now())
+
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_interactions")
+}
+
+// =====================================================================
+// SUPPLIERS
+// =====================================================================
+
+model Supplier {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  code           String?
+  email          String?
+  phone          String?
+  website        String?
+  address        String?
+  city           String?
+  country        String?
+  taxId          String?
+  contactName    String?
+  paymentTerms   Int      @default(30)
+  currency       String   @default("COP")
+  rating         Float?
+  isActive       Boolean  @default(true)
+  notes          String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+// =====================================================================
+// PURCHASE ORDERS
+// =====================================================================
+
+model PurchaseOrder {
+  id             String   @id @default(cuid())
+  organizationId String
+  supplierId     String
+  number         String
+  status         String   @default("DRAFT")
+  orderDate      DateTime @default(now())
+  expectedDate   DateTime?
+  receivedDate   DateTime?
+  subtotal       Float    @default(0)
+  taxAmount      Float    @default(0)
+  total          Float    @default(0)
+  notes          String?
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  supplier       Supplier            @relation(fields: [supplierId], references: [id])
+  items          PurchaseOrderItem[]
+
+  @@unique([organizationId, number])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  variantId       String?
+  quantity        Int
+  unitCost        Float
+  totalCost       Float
+  receivedQty     Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// =====================================================================
+// ORDERS & INVOICES
+// =====================================================================
+
+model Order {
+  id               String         @id @default(cuid())
+  organizationId   String
+  branchId         String?
+  customerId       String?
+  createdById      String?
+  number           String
+  status           OrderStatus    @default(PENDING)
+  channel          SaleChannel    @default(POS)
+  deliveryMethod   DeliveryMethod @default(PICKUP)
+
+  // Totales
+  subtotal         Float          @default(0)
+  discountAmount   Float          @default(0)
+  taxAmount        Float          @default(0)
+  shippingCost     Float          @default(0)
+  total            Float          @default(0)
+  paidAmount       Float          @default(0)
+  changeAmount     Float          @default(0)
+
+  // Envío / Entrega
+  shippingAddress  Json?          // { name, phone, street, city, state, zip, country, instructions }
+  trackingNumber   String?
+  courierName      String?
+  shippingLabelUrl String?
+  scheduledAt      DateTime?
+  estimatedDelivery DateTime?
+  shippedAt        DateTime?
+  deliveredAt      DateTime?
+
+  // Info general
+  notes            String?
+  customerNote     String?
+  internalNote     String?
+  source           String?        // URL, plataforma, etc.
+  metadata         Json           @default("{}")
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch?       @relation(fields: [branchId], references: [id])
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  createdBy      User?         @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  items          OrderItem[]
+  payments       Payment[]
+  invoice        Invoice?
+
+  @@unique([organizationId, number])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String
+  variantId   String?
+  name        String
+  sku         String?
+  quantity    Int
+  unitPrice   Float
+  costPrice   Float    @default(0)
+  discount    Float    @default(0)
+  taxRate     Float    @default(0)
+  taxAmount   Float    @default(0)
+  subtotal    Float
+  total       Float
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organizationId String
+  branchId       String?
+  customerId     String?
+  orderId        String?       @unique
+  createdById    String?
+  number         String
+  status         InvoiceStatus @default(DRAFT)
+  issueDate      DateTime      @default(now())
+  dueDate        DateTime?
+  subtotal       Float         @default(0)
+  discountAmount Float         @default(0)
+  taxAmount      Float         @default(0)
+  total          Float         @default(0)
+  paidAmount     Float         @default(0)
+  balance        Float         @default(0)
+  notes          String?
+  terms          String?
+  pdfUrl         String?
+  electronicCode String?
+  qrData         String?
+  signature      String?
+  metadata       Json          @default("{}")
+  sentAt         DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch?       @relation(fields: [branchId], references: [id])
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  order          Order?        @relation(fields: [orderId], references: [id])
+  createdBy      User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  items          InvoiceItem[]
+  payments       Payment[]
+
+  @@unique([organizationId, number])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  productId   String?
+  name        String
+  description String?
+  quantity    Float
+  unitPrice   Float
+  discount    Float    @default(0)
+  taxRate     Float    @default(0)
+  taxAmount   Float    @default(0)
+  subtotal    Float
+  total       Float
+  createdAt   DateTime @default(now())
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id])
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  organizationId String?
+  invoiceId     String?
+  orderId       String?
+  method        PaymentMethod
+  amount        Float
+  currency      String        @default("COP")
+  exchangeRate  Float         @default(1)
+  reference     String?
+  gatewayId     String?
+  gatewayData   Json?
+  status        String        @default("COMPLETED")
+  notes         String?
+  processedAt   DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+
+  invoice       Invoice?      @relation(fields: [invoiceId], references: [id])
+  order         Order?        @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+// =====================================================================
+// CASH REGISTER
+// =====================================================================
+
+model CashRegister {
+  id             String   @id @default(cuid())
+  organizationId String
+  branchId       String?
+  userId         String?
+  name           String
+  openingBalance Float    @default(0)
+  closingBalance Float?
+  expectedBalance Float?
+  difference     Float?
+  isOpen         Boolean  @default(false)
+  openedAt       DateTime?
+  closedAt       DateTime?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  branch         Branch?  @relation(fields: [branchId], references: [id])
+  user           User?    @relation(fields: [userId], references: [id])
+
+  @@map("cash_registers")
+}
+
+// =====================================================================
+// EXPENSES
+// =====================================================================
+
+model Expense {
+  id             String   @id @default(cuid())
+  organizationId String
+  category       String
+  description    String
+  amount         Float
+  taxAmount      Float    @default(0)
+  total          Float
+  paymentMethod  String?
+  reference      String?
+  receiptUrl     String?
+  date           DateTime @default(now())
+  notes          String?
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+// =====================================================================
+// SUBSCRIPTIONS (SaaS)
+// =====================================================================
+
+model Subscription {
+  id              String             @id @default(cuid())
+  organizationId  String             @unique
+  plan            SubscriptionPlan   @default(FREE)
+  status          SubscriptionStatus @default(TRIAL)
+  stripeCustomerId String?
+  stripeSubId     String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEndsAt     DateTime?
+  cancelledAt     DateTime?
+  seats           Int                @default(1)
+  usedSeats       Int                @default(0)
+  features        Json               @default("[]")
+  price           Float              @default(0)
+  billingCycle    String             @default("MONTHLY")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// =====================================================================
+// AI CONVERSATIONS
+// =====================================================================
+
+model AIConversation {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  title          String?
+  model          String   @default("gpt-4-turbo-preview")
+  messages       Json     @default("[]")
+  context        Json     @default("{}")
+  tokens         Int      @default(0)
+  cost           Float    @default(0)
+  isArchived     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@map("ai_conversations")
+}
+
+model AIInsight {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  title          String
+  description    String
+  data           Json     @default("{}")
+  score          Float?
+  action         String?
+  isRead         Boolean  @default(false)
+  isDismissed    Boolean  @default(false)
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  @@map("ai_insights")
+}
+
+model AIEmbedding {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  entityId       String
+  content        String
+  embedding      Float[]
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, entityType, entityId])
+  @@map("ai_embeddings")
+}
+
+// =====================================================================
+// NOTIFICATIONS
+// =====================================================================
+
+model Notification {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String?
+  type           NotificationType @default(INFO)
+  title          String
+  message        String
+  data           Json             @default("{}")
+  link           String?
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?            @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+// =====================================================================
+// AUTOMATIONS
+// =====================================================================
+
+model Automation {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  trigger        Json
+  conditions     Json     @default("[]")
+  actions        Json     @default("[]")
+  isActive       Boolean  @default(true)
+  lastRunAt      DateTime?
+  runCount       Int      @default(0)
+  errorCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runs           AutomationRun[]
+
+  @@map("automations")
+}
+
+model AutomationRun {
+  id           String    @id @default(cuid())
+  automationId String
+  status       String
+  input        Json      @default("{}")
+  output       Json      @default("{}")
+  error        String?
+  duration     Int?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@map("automation_runs")
+}
+
+// =====================================================================
+// TASKS & PROJECTS
+// =====================================================================
+
+model Task {
+  id             String       @id @default(cuid())
+  organizationId String
+  assignedToId   String?
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?
+  completedAt    DateTime?
+  tags           String[]     @default([])
+  metadata       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTo     User?        @relation(fields: [assignedToId], references: [id])
+
+  @@map("tasks")
+}
+
+// =====================================================================
+// EMAIL CAMPAIGNS
+// =====================================================================
+
+model EmailCampaign {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  subject        String
+  content        String
+  segment        Json     @default("{}")
+  status         String   @default("DRAFT")
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  sentCount      Int      @default(0)
+  openCount      Int      @default(0)
+  clickCount      Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("email_campaigns")
+}
+
+// =====================================================================
+// REPORTS
+// =====================================================================
+
+model SavedReport {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  type           String
+  config         Json     @default("{}")
+  schedule       Json?
+  lastRunAt      DateTime?
+  isPublic       Boolean  @default(false)
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("saved_reports")
+}
+
+// =====================================================================
+// WEBHOOKS & API KEYS
+// =====================================================================
+
+model Webhook {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  url            String
+  secret         String
+  events         String[] @default([])
+  isActive       Boolean  @default(true)
+  lastTriggeredAt DateTime?
+  failureCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("webhooks")
+}
+
+model APIKey {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  keyHash        String   @unique
+  keyPrefix      String
+  permissions    Json     @default("[]")
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// =====================================================================
+// AUDIT LOGS
+// =====================================================================
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String
+  entity         String
+  entityId       String?
+  oldValues      Json?
+  newValues      Json?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// =====================================================================
+// TICKETS (Support)
+// =====================================================================
+
+model Ticket {
+  id             String         @id @default(cuid())
+  organizationId String
+  title          String
+  description    String
+  status         TicketStatus   @default(OPEN)
+  priority       TicketPriority @default(MEDIUM)
+  assignedTo     String?
+  createdBy      String?
+  resolvedAt     DateTime?
+  metadata       Json           @default("{}")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  comments       TicketComment[]
+
+  @@map("tickets")
+}
+
+model TicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String?
+  content   String
+  isInternal Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_comments")
+}
+
+// =====================================================================
+// SHIPPING ZONES (Zonas de despacho)
+// =====================================================================
+
+model ShippingZone {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String                // "Bogotá", "Nacional", "Internacional"
+  cities         String[] @default([]) // ciudades cubiertas
+  departments    String[] @default([]) // departamentos
+  countries      String[] @default(["CO"])
+  carrier        String?               // "Coordinadora", "Servientrega", "Domicilio propio"
+  minDays        Int      @default(1)
+  maxDays        Int      @default(3)
+  baseRate       Float    @default(0)  // Costo base de envío
+  freeFrom       Float?               // Pedido mínimo para envío gratis
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("shipping_zones")
+}
+
+// =====================================================================
+// ONLINE STORE SETTINGS
+// =====================================================================
+
+model OnlineStore {
+  id               String   @id @default(cuid())
+  organizationId   String       @unique
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isActive         Boolean      @default(false)
+  storeName        String?
+  storeUrl         String?
+  logoUrl          String?
+  bannerUrl        String?
+  primaryColor     String   @default("#6366f1")
+  description      String?
+  whatsappNumber   String?
+  instagramHandle  String?
+  facebookUrl      String?
+  minOrderAmount   Float    @default(0)
+  acceptsCOD       Boolean  @default(true)   // Pago contra entrega
+  acceptsTransfer  Boolean  @default(true)   // Transferencia
+  acceptsOnline    Boolean  @default(false)  // Pasarela de pago online
+  policies         Json     @default("{}")   // devoluciones, envíos, privacidad
+  seoTitle         String?
+  seoDescription   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("online_stores")
+}

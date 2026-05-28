@@ -1,0 +1,179 @@
+version: '3.9'
+
+services:
+  # ================================================================
+  # PostgreSQL
+  # ================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexus_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexus_user
+      POSTGRES_PASSWORD: nexus_pass
+      POSTGRES_DB: nexus_erp
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexus_user -d nexus_erp']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus_network
+
+  # ================================================================
+  # Redis
+  # ================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: nexus_redis
+    restart: unless-stopped
+    command: redis-server --requirepass nexus_redis_pass --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', 'nexus_redis_pass', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus_network
+
+  # ================================================================
+  # NestJS API
+  # ================================================================
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: production
+    container_name: nexus_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://nexus_user:nexus_pass@postgres:5432/nexus_erp?schema=public
+      REDIS_URL: redis://:nexus_redis_pass@redis:6379
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - api_uploads:/app/uploads
+    networks:
+      - nexus_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # ================================================================
+  # Next.js Web
+  # ================================================================
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: production
+    container_name: nexus_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://api:4000/api/v1
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+    networks:
+      - nexus_network
+
+  # ================================================================
+  # Nginx Reverse Proxy
+  # ================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: nexus_nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - web
+      - api
+    networks:
+      - nexus_network
+
+  # ================================================================
+  # PgAdmin (Dev only)
+  # ================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexus_pgadmin
+    restart: unless-stopped
+    profiles: ['dev']
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nexuserp.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - '5050:80'
+    depends_on:
+      - postgres
+    networks:
+      - nexus_network
+
+  # ================================================================
+  # Minio (S3-compatible storage — Dev)
+  # ================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: nexus_minio
+    restart: unless-stopped
+    profiles: ['dev']
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: nexus_minio_user
+      MINIO_ROOT_PASSWORD: nexus_minio_pass
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    networks:
+      - nexus_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  api_uploads:
+    driver: local
+  minio_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  nexus_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
