@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import * as PDFDocument from 'pdfkit';
@@ -12,6 +12,223 @@ export class InvoicesService {
     private config: ConfigService,
     private events: EventEmitter2,
   ) {}
+
+  // ── Crear factura standalone ──────────────────────────────────────────
+  async create(organizationId: string, actorId: string, dto: any) {
+    if (!dto.items?.length) throw new BadRequestException('La factura debe tener al menos un ítem');
+
+    const number = await this.generateInvoiceNumber(organizationId, dto.type ?? 'INV');
+    const subtotal = dto.items.reduce((s: number, i: any) => s + Number(i.unitPrice) * Number(i.quantity), 0);
+    const discountAmount = Number(dto.discountAmount ?? 0);
+    const taxBase = subtotal - discountAmount;
+    const taxRate = Number(dto.taxRate ?? 0.19);
+    const taxAmount = Number(dto.taxAmount ?? taxBase * taxRate);
+    const total = taxBase + taxAmount;
+
+    const invoice = await this.prisma.invoice.create({
+      data: {
+        organizationId,
+        customerId: dto.customerId ?? null,
+        branchId: dto.branchId ?? null,
+        createdById: actorId,
+        number,
+        status: dto.status ?? 'PENDING',
+        issueDate: dto.issueDate ? new Date(dto.issueDate) : new Date(),
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        total,
+        paidAmount: 0,
+        balance: total,
+        notes: dto.notes,
+        terms: dto.terms,
+        metadata: { type: dto.type ?? 'INVOICE', channel: dto.channel ?? 'MANUAL', ...dto.metadata },
+        items: {
+          create: dto.items.map((item: any) => {
+            const qty    = Number(item.quantity);
+            const price  = Number(item.unitPrice);
+            const disc   = Number(item.discount ?? 0);
+            const tRate  = Number(item.taxRate ?? taxRate);
+            const sub    = price * qty - disc;
+            const tax    = sub * tRate;
+            return {
+              productId:   item.productId ?? null,
+              name:        item.name,
+              description: item.description ?? null,
+              quantity:    qty,
+              unitPrice:   price,
+              discount:    disc,
+              taxRate:     tRate,
+              taxAmount:   tax,
+              subtotal:    sub,
+              total:       sub + tax,
+            };
+          }),
+        },
+      },
+      include: {
+        items: true,
+        customer: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    this.events.emit('invoice.created', { organizationId, invoice });
+    return invoice;
+  }
+
+  // ── Actualizar factura (sólo DRAFT / PENDING) ─────────────────────────
+  async update(organizationId: string, id: string, dto: any) {
+    const invoice = await this.findOne(organizationId, id);
+    if (['PAID', 'CANCELLED'].includes(invoice.status)) {
+      throw new BadRequestException('No se puede editar una factura pagada o cancelada');
+    }
+
+    const data: any = {};
+    if (dto.customerId !== undefined) data.customerId = dto.customerId;
+    if (dto.dueDate     !== undefined) data.dueDate   = dto.dueDate ? new Date(dto.dueDate) : null;
+    if (dto.notes       !== undefined) data.notes     = dto.notes;
+    if (dto.terms       !== undefined) data.terms     = dto.terms;
+    if (dto.status      !== undefined) data.status    = dto.status;
+
+    return this.prisma.invoice.update({ where: { id }, data });
+  }
+
+  // ── Enviar factura (DRAFT → PENDING) ────────────────────────────────
+  async sendInvoice(organizationId: string, id: string) {
+    const invoice = await this.findOne(organizationId, id);
+    if (invoice.status !== 'DRAFT') throw new BadRequestException('Solo se pueden enviar facturas en borrador');
+
+    return this.prisma.invoice.update({
+      where: { id },
+      data: { status: 'PENDING', sentAt: new Date() },
+    });
+  }
+
+  // ── Cancelar factura ─────────────────────────────────────────────────
+  async cancelInvoice(organizationId: string, id: string, reason?: string) {
+    const invoice = await this.findOne(organizationId, id);
+    if (invoice.status === 'PAID') throw new BadRequestException('No se puede cancelar una factura pagada');
+
+    return this.prisma.invoice.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        notes: reason ? `Cancelada: ${reason}` : invoice.notes,
+      },
+    });
+  }
+
+  // ── Nota crédito (vincula a factura original vía metadata) ────────────
+  async createCreditNote(organizationId: string, originalId: string, actorId: string, dto: any) {
+    const original = await this.findOne(organizationId, originalId);
+    if (original.status !== 'PAID') throw new BadRequestException('Solo se puede crear nota crédito sobre facturas pagadas');
+
+    const amount = Number(dto.amount ?? original.total);
+    const number = await this.generateInvoiceNumber(organizationId, 'NC');
+
+    const creditNote = await this.prisma.invoice.create({
+      data: {
+        organizationId,
+        customerId: original.customerId,
+        branchId:   (original as any).branchId,
+        createdById: actorId,
+        number,
+        status: 'REFUNDED',
+        issueDate: new Date(),
+        subtotal: -amount,
+        taxAmount: 0,
+        total: -amount,
+        paidAmount: -amount,
+        balance: 0,
+        paidAt: new Date(),
+        notes: dto.reason ?? `Nota crédito de ${original.number}`,
+        metadata: { type: 'CREDIT_NOTE', originalInvoiceId: originalId, originalNumber: original.number },
+        items: {
+          create: [{
+            name: `Nota crédito — ${original.number}`,
+            description: dto.reason ?? 'Reembolso',
+            quantity: 1,
+            unitPrice: -amount,
+            discount: 0,
+            taxRate: 0,
+            taxAmount: 0,
+            subtotal: -amount,
+            total: -amount,
+          }],
+        },
+      },
+    });
+
+    // Reembolsar el pago original
+    await this.prisma.payment.create({
+      data: {
+        organizationId,
+        invoiceId: originalId,
+        method: 'CASH',
+        amount: -amount,
+        currency: 'COP',
+        reference: creditNote.number,
+        status: 'REFUNDED',
+        notes: `Nota crédito ${creditNote.number}`,
+      },
+    });
+
+    this.events.emit('invoice.refunded', { organizationId, originalId, creditNote });
+    return creditNote;
+  }
+
+  // ── Estadísticas de facturación ──────────────────────────────────────
+  async getStats(organizationId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [total, monthly, byStatus] = await Promise.all([
+      this.prisma.invoice.aggregate({
+        where: { organizationId },
+        _sum: { total: true, paidAmount: true, balance: true },
+        _count: true,
+      }),
+      this.prisma.invoice.aggregate({
+        where: { organizationId, issueDate: { gte: startOfMonth } },
+        _sum: { total: true, paidAmount: true },
+        _count: true,
+      }),
+      this.prisma.invoice.groupBy({
+        by: ['status'],
+        where: { organizationId },
+        _count: true,
+        _sum: { total: true },
+      }),
+    ]);
+
+    return {
+      total: total._count,
+      totalRevenue:  total._sum.total    ?? 0,
+      totalCollected: total._sum.paidAmount ?? 0,
+      totalBalance:  total._sum.balance   ?? 0,
+      thisMonth: {
+        count:    monthly._count,
+        revenue:  monthly._sum.total ?? 0,
+        collected: monthly._sum.paidAmount ?? 0,
+      },
+      byStatus: byStatus.map(s => ({
+        status: s.status,
+        count: s._count,
+        total: s._sum.total ?? 0,
+      })),
+    };
+  }
+
+  private async generateInvoiceNumber(organizationId: string, prefix = 'INV'): Promise<string> {
+    const now = new Date();
+    const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const pat = `${prefix}-${ym}`;
+    const count = await this.prisma.invoice.count({
+      where: { organizationId, number: { startsWith: pat } },
+    });
+    return `${pat}-${String(count + 1).padStart(5, '0')}`;
+  }
 
   async findAll(organizationId: string, query: any) {
     const page = parseInt(query.page) || 1;

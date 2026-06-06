@@ -28,6 +28,8 @@ import { TicketsModule } from './modules/tickets/tickets.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CashRegistersModule } from './modules/cash-registers/cash-registers.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { OnlineStoreModule } from './modules/online-store/online-store.module';
 import { PrismaModule } from './config/prisma.module';
 import { AppGateway } from './gateways/app.gateway';
 
@@ -86,6 +88,8 @@ import { AppGateway } from './gateways/app.gateway';
     BranchesModule,
     CashRegistersModule,
     AuditLogsModule,
+    PurchaseOrdersModule,
+    OnlineStoreModule,
   ],
   providers: [AppGateway],
 })

@@ -54,7 +54,8 @@ export function Sidebar() {
         { href: '/products',   label: 'Productos',    icon: Package, show: true },
         { href: '/inventory',  label: 'Inventario',   icon: Boxes,   show: true },
         { href: '/categories', label: 'Categorías',   icon: Tag,     show: perms.canManageCatalog },
-        { href: '/suppliers',  label: 'Proveedores',  icon: Truck,   show: perms.canManageCatalog },
+        { href: '/suppliers',       label: 'Proveedores',     icon: Truck,         show: perms.canManageCatalog },
+        { href: '/purchase-orders', label: 'Órdenes de Compra', icon: ShoppingCart,  show: perms.canManageCatalog },
       ].filter(i => i.show),
     },
     {
