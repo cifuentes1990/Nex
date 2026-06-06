@@ -78,7 +78,7 @@ export default function DashboardPage() {
         {perms.canUsePOS && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Link href="/pos">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 hover:bg-emerald-500/15 hover:border-emerald-500/40 transition-all cursor-pointer group">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 hover:bg-emerald-500/15 hover:border-emerald-500/40 transition-all cursor-pointer select-none group">
                 <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-transform">
                   <Store className="h-6 w-6 text-white" />
                 </div>
@@ -90,7 +90,7 @@ export default function DashboardPage() {
               </div>
             </Link>
             <Link href="/online-orders">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-nexus-500/10 border border-nexus-500/25 hover:bg-nexus-500/15 hover:border-nexus-500/40 transition-all cursor-pointer group">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-nexus-500/10 border border-nexus-500/25 hover:bg-nexus-500/15 hover:border-nexus-500/40 transition-all cursor-pointer select-none group">
                 <div className="w-12 h-12 rounded-xl bg-nexus-500 flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-transform">
                   <MonitorSmartphone className="h-6 w-6 text-white" />
                 </div>

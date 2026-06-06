@@ -77,9 +77,9 @@ export default function ProductsPage() {
 
   const stats = [
     { label: 'Total productos', value: formatNumber(data?.total ?? 0), icon: Package, color: 'nexus' },
-    { label: 'Activos', value: formatNumber(data?.items?.filter((p: any) => p.status === 'ACTIVE').length ?? 0), icon: TrendingUp, color: 'emerald' },
-    { label: 'Stock bajo', value: formatNumber(data?.items?.filter((p: any) => p.isLowStock).length ?? 0), icon: AlertTriangle, color: 'amber' },
-    { label: 'Sin stock', value: formatNumber(data?.items?.filter((p: any) => p.stock === 0).length ?? 0), icon: TrendingDown, color: 'rose' },
+    { label: 'Activos', value: formatNumber(data?.items?.filter((p: any) => p.status === 'ACTIVE')?.length ?? 0), icon: TrendingUp, color: 'emerald' },
+    { label: 'Stock bajo', value: formatNumber(data?.items?.filter((p: any) => p.isLowStock)?.length ?? 0), icon: AlertTriangle, color: 'amber' },
+    { label: 'Sin stock', value: formatNumber(data?.items?.filter((p: any) => p.stock === 0)?.length ?? 0), icon: TrendingDown, color: 'rose' },
   ];
 
   return (

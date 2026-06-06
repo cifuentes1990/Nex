@@ -131,7 +131,7 @@ export default function TicketsPage() {
               return (
                 <div
                   key={ticket.id}
-                  className="nexus-card p-4 flex items-center gap-4 hover:border-nexus-500/30 transition-colors cursor-pointer group"
+                  className="nexus-card p-4 flex items-center gap-4 hover:border-nexus-500/30 transition-colors cursor-pointer select-none group"
                   onClick={() => setSelected(ticket)}
                 >
                   <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center shrink-0">

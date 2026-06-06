@@ -60,9 +60,9 @@ export default function CustomersPage() {
 
   const stats = [
     { label: 'Total clientes', value: formatNumber(data?.total ?? 0), color: 'nexus' },
-    { label: 'VIP', value: formatNumber(data?.items?.filter((c: any) => c.segment === 'VIP').length ?? 0), color: 'amber' },
-    { label: 'En riesgo', value: formatNumber(data?.items?.filter((c: any) => c.segment === 'AT_RISK').length ?? 0), color: 'orange' },
-    { label: 'Nuevos (30d)', value: formatNumber(data?.items?.filter((c: any) => c.segment === 'NEW').length ?? 0), color: 'emerald' },
+    { label: 'VIP', value: formatNumber(data?.items?.filter((c: any) => c.segment === 'VIP')?.length ?? 0), color: 'amber' },
+    { label: 'En riesgo', value: formatNumber(data?.items?.filter((c: any) => c.segment === 'AT_RISK')?.length ?? 0), color: 'orange' },
+    { label: 'Nuevos (30d)', value: formatNumber(data?.items?.filter((c: any) => c.segment === 'NEW')?.length ?? 0), color: 'emerald' },
   ];
 
   return (
@@ -152,7 +152,7 @@ export default function CustomersPage() {
                 return (
                   <div
                     key={customer.id}
-                    className="nexus-card p-5 group hover:border-nexus-500/30 transition-colors cursor-pointer"
+                    className="nexus-card p-5 group hover:border-nexus-500/30 transition-colors cursor-pointer select-none"
                     onClick={() => setSelected(customer)}
                   >
                     <div className="flex items-start justify-between mb-4">

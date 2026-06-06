@@ -189,7 +189,7 @@ export default function OrdersPage() {
                   return (
                     <tr
                       key={order.id}
-                      className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                      className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer select-none"
                       onClick={() => setSelectedOrder(order)}
                     >
                       <td className="p-4">

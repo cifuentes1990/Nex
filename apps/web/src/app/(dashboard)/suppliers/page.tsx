@@ -94,7 +94,7 @@ export default function SuppliersPage() {
               {data?.items?.map((supplier: any, i: number) => (
                 <div
                   key={supplier.id}
-                  className="nexus-card p-5 group hover:border-nexus-500/30 transition-colors cursor-pointer"
+                  className="nexus-card p-5 group hover:border-nexus-500/30 transition-colors cursor-pointer select-none"
                   onClick={() => setSelected(supplier)}
                 >
                   <div className="flex items-start justify-between mb-4">

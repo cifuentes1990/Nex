@@ -107,7 +107,7 @@ export default function AIPage() {
             <div
               key={insight.id}
               className={cn(
-                'p-3 rounded-xl border text-xs cursor-pointer hover:shadow-sm transition-all',
+                'p-3 rounded-xl border text-xs cursor-pointer select-none hover:shadow-sm transition-all',
                 (insight.type === 'warning' || insight.type === 'WARNING') && 'bg-amber-500/5 border-amber-500/20',
                 (insight.type === 'opportunity' || insight.type === 'OPPORTUNITY') && 'bg-nexus-500/5 border-nexus-500/20',
                 (insight.type === 'alert' || insight.type === 'ALERT') && 'bg-rose-500/5 border-rose-500/20',

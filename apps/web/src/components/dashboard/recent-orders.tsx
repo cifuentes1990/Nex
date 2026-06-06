@@ -79,7 +79,7 @@ export function RecentOrders({ orders: propOrders, loading: propLoading }: Recen
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-semibold tabular-nums">{formatCurrency(order.total)}</p>
-                  <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', status.color)}>
+                  <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium select-none', status.color)}>
                     {status.label}
                   </span>
                 </div>

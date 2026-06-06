@@ -63,16 +63,30 @@
   html {
     @apply scroll-smooth;
   }
-  /* Todos los botones siempre muestran cursor pointer y no son seleccionables */
-  button {
+  /* Todos los elementos interactivos: cursor pointer, no seleccionables */
+  button,
+  [role="button"],
+  select,
+  label,
+  summary {
     @apply cursor-pointer select-none;
   }
-  button:disabled {
+  button:disabled,
+  select:disabled,
+  [role="button"][aria-disabled="true"] {
     @apply cursor-not-allowed;
   }
-  /* Los pre/code muestran cursor de texto normal, no de selección */
+  /* Inputs: cursor de texto siempre */
+  input, textarea {
+    @apply cursor-text;
+  }
+  /* pre/code: cursor default, no selección accidental */
   pre, code {
     @apply cursor-default;
+  }
+  /* Links sin href: pointer */
+  a[href] {
+    @apply cursor-pointer;
   }
 }
 
