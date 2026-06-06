@@ -40,13 +40,24 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        toast.error('Credenciales incorrectas');
+        // Distinguir entre error de credenciales y error de servidor
+        if (result.error === 'CredentialsSignin') {
+          toast.error('Credenciales incorrectas', {
+            description: 'Verifica tu email y contraseña',
+          });
+        } else {
+          toast.error('No se puede conectar al servidor', {
+            description: 'La base de datos no está disponible. Intenta en unos minutos.',
+          });
+        }
       } else {
         toast.success('Bienvenido de vuelta');
         router.push('/dashboard');
       }
     } catch {
-      toast.error('Error al iniciar sesión');
+      toast.error('Error de conexión', {
+        description: 'No se pudo conectar con el servidor. ¿Está la API corriendo?',
+      });
     } finally {
       setIsLoading(false);
     }

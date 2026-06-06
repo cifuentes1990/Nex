@@ -28,8 +28,12 @@ const handler = NextAuth({
             };
           }
           return null;
-        } catch {
-          return null;
+        } catch (err: any) {
+          const status = err?.response?.status;
+          // 401/403 = credenciales incorrectas → NextAuth lanza CredentialsSignin
+          if (status === 401 || status === 403) return null;
+          // 5xx o sin conexión = problema de servidor → error distinguible
+          throw new Error('ServerError');
         }
       },
     }),

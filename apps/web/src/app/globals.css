@@ -63,6 +63,13 @@
   html {
     @apply scroll-smooth;
   }
+  /* Todos los botones siempre muestran cursor pointer y no son seleccionables */
+  button {
+    @apply cursor-pointer select-none;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
 }
 
 @layer components {
