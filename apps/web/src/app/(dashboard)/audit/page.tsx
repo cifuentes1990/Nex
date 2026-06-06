@@ -173,7 +173,7 @@ function AuditContent({
                   <div className="flex items-start gap-4">
                     {/* Action badge */}
                     <span className={cn(
-                      'text-[11px] px-2 py-0.5 rounded-full font-semibold shrink-0 mt-0.5',
+                      'text-[11px] px-2 py-0.5 rounded-full font-semibold shrink-0 mt-0.5 select-none cursor-default',
                       ACTION_COLORS[log.action] ?? 'bg-muted text-muted-foreground',
                     )}>
                       {ACTION_LABELS[log.action] ?? log.action}
@@ -209,11 +209,11 @@ function AuditContent({
 
                       {/* Changed values */}
                       {(log.oldValues || log.newValues) && (
-                        <div className="mt-2 flex gap-3">
+                        <div className="mt-2 flex gap-3 select-none">
                           {log.oldValues && (
                             <div className="text-[11px] bg-rose-500/10 rounded-lg px-2.5 py-1.5">
                               <p className="text-rose-400 font-semibold mb-0.5">Antes</p>
-                              <pre className="text-muted-foreground overflow-auto max-w-[200px] max-h-[80px]">
+                              <pre className="text-muted-foreground overflow-auto max-w-[200px] max-h-[80px] cursor-default">
                                 {JSON.stringify(log.oldValues, null, 2)}
                               </pre>
                             </div>
@@ -221,7 +221,7 @@ function AuditContent({
                           {log.newValues && (
                             <div className="text-[11px] bg-emerald-500/10 rounded-lg px-2.5 py-1.5">
                               <p className="text-emerald-400 font-semibold mb-0.5">Después</p>
-                              <pre className="text-muted-foreground overflow-auto max-w-[200px] max-h-[80px]">
+                              <pre className="text-muted-foreground overflow-auto max-w-[200px] max-h-[80px] cursor-default">
                                 {JSON.stringify(log.newValues, null, 2)}
                               </pre>
                             </div>
