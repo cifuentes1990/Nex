@@ -55,7 +55,7 @@ jobs:
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine
+        image: postgres:16-alpine
         env:
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_pass
@@ -69,7 +69,7 @@ jobs:
           --health-retries 5
 
       redis:
-        image: public.ecr.aws/docker/library/redis:7-alpine
+        image: redis:7-alpine
         ports:
           - 6379:6379
 
