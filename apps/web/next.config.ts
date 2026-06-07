@@ -3,7 +3,6 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  serverExternalPackages: ['@prisma/client'],
   // ESLint and TypeScript are already validated in the Quality Gates CI job.
   // Skipping them here avoids duplicate work and reduces Docker build memory usage.
   eslint: { ignoreDuringBuilds: true },
