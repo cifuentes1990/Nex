@@ -6,18 +6,22 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Root lock file + workspace manifests (monorepo — lock is at root)
 COPY package*.json ./
-RUN npm ci
+COPY apps/web/package*.json ./apps/web/
+
+RUN npm ci --workspace=apps/web --include-workspace-root
 
 # ---- Builder ----
 FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY apps/web ./apps/web
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+WORKDIR /app/apps/web
 RUN npm run build
 
 # ---- Production ----
@@ -32,9 +36,9 @@ RUN adduser --system --uid 1001 nextjs
 
 WORKDIR /app
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 
 USER nextjs
 
