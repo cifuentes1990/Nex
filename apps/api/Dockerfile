@@ -7,18 +7,21 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
+# Copy all workspace package manifests so npm ci resolves the full graph
 COPY package*.json ./
 COPY packages/database/package*.json ./packages/database/
 COPY apps/api/package*.json ./apps/api/
+COPY apps/web/package*.json ./apps/web/
 
-RUN npm ci --workspace=apps/api --include-workspace-root
+# Install all workspaces — deps are hoisted to root node_modules
+RUN npm ci
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# With npm workspaces, node_modules only exists at the root (hoisted)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY packages/database ./packages/database
 COPY apps/api ./apps/api
 COPY tsconfig.json ./
