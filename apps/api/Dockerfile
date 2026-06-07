@@ -7,16 +7,13 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Copy all workspace package manifests so npm ci resolves the full graph
+# Copy only the package manifests needed for the API and its workspace deps
 COPY package*.json ./
 COPY packages/database/package*.json ./packages/database/
 COPY apps/api/package*.json ./apps/api/
-COPY apps/web/package*.json ./apps/web/
 
-# Install all workspaces — deps are hoisted to root node_modules
-# Remove workspace-local node_modules created by npm (prevents BuildKit cache issues)
-RUN npm ci && \
-    rm -rf apps/api/node_modules apps/web/node_modules packages/database/node_modules 2>/dev/null || true
+# Install only what the API workspace needs (hoisted to root node_modules)
+RUN npm ci --workspace=packages/database --workspace=apps/api --include-workspace-root
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
