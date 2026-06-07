@@ -2,7 +2,7 @@
 # Nexus ERP — Web Dockerfile (Multi-stage, Next.js 15)
 # ================================================================
 
-# Stage 1: Dependencies
+# Stage 1: Dependencies (Alpine — fast, small)
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -13,13 +13,15 @@ COPY apps/web/package*.json ./apps/web/
 
 RUN npm ci --workspace=apps/web --include-workspace-root
 
-# Stage 2: Builder
-FROM node:20-alpine AS builder
+# Stage 2: Builder — use full Debian to avoid Alpine musl issues with webpack
+# (Next.js standalone tracing + webpack can hit musl-specific crashes on Alpine)
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 # Root tsconfig is required: apps/web/tsconfig.json extends ../../tsconfig.json
 COPY tsconfig.json ./
+COPY package.json ./
 COPY apps/web ./apps/web
 
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -28,7 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXTAUTH_SECRET=build-placeholder-not-used-at-runtime
 ENV NEXTAUTH_URL=http://localhost:3000
 ENV NEXT_PUBLIC_API_URL=http://localhost:4000
-# Give Node.js 4 GB heap — webpack needs it; Docker runner default is too low
+# Give Node.js 4 GB heap — webpack needs it for large builds
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
 WORKDIR /app/apps/web
@@ -38,8 +40,10 @@ RUN mkdir -p public
 
 RUN npm run build
 
-# Stage 3: Production
+# Stage 3: Production (Alpine — smallest possible runtime image)
 FROM node:20-alpine AS production
+
+RUN apk add --no-cache libc6-compat
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
