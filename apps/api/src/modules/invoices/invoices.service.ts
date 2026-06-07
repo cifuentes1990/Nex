@@ -287,6 +287,20 @@ export class InvoicesService {
     const invoice = await this.findOne(organizationId, id);
     const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
 
+    // Pre-compute async resources before entering the sync Promise executor
+    const qrData = JSON.stringify({
+      inv: invoice.number,
+      total: invoice.total,
+      date: invoice.issueDate,
+      org: org?.name,
+    });
+    let qrBuffer: Buffer | null = null;
+    try {
+      qrBuffer = await QRCode.toBuffer(qrData, { width: 80, margin: 1 });
+    } catch {
+      // QR generation failed, will skip in PDF
+    }
+
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const buffers: Buffer[] = [];
@@ -407,19 +421,10 @@ export class InvoicesService {
       doc.text(this.formatCurrency(invoice.total), 430, totalsY + 69, { width: 105, align: 'right' });
 
       // ── QR CODE ─────────────────────────────────────────────────
-      try {
-        const qrData = JSON.stringify({
-          inv: invoice.number,
-          total: invoice.total,
-          date: invoice.issueDate,
-          org: org?.name,
-        });
-        const qrBuffer = await QRCode.toBuffer(qrData, { width: 80, margin: 1 });
+      if (qrBuffer) {
         doc.image(qrBuffer, 50, totalsY, { width: 80 });
         doc.fillColor(GRAY).font('Helvetica').fontSize(8)
           .text('Escanea para verificar', 50, totalsY + 85, { width: 80, align: 'center' });
-      } catch {
-        // QR generation failed, skip
       }
 
       // ── FOOTER ──────────────────────────────────────────────────
