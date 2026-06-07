@@ -161,7 +161,21 @@ jobs:
     environment: production
 
     steps:
+      - name: Check deploy prerequisites
+        id: prereq
+        run: |
+          if [ -n "$DEPLOY_HOST" ]; then
+            echo "can_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Deploy secrets configured — proceeding with SSH deployment"
+          else
+            echo "can_deploy=false" >> $GITHUB_OUTPUT
+            echo "⚠️  DEPLOY_HOST secret not set — skipping SSH deployment (configure secrets to enable)"
+          fi
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+
       - name: Deploy via SSH
+        if: steps.prereq.outputs.can_deploy == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
