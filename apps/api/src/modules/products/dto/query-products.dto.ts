@@ -1,7 +1,8 @@
 import { IsOptional, IsString, IsNumber, IsBoolean, IsEnum, Min, Max } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProductStatus } from '@prisma/client';
+const ProductStatus = { ACTIVE: 'ACTIVE', INACTIVE: 'INACTIVE', DISCONTINUED: 'DISCONTINUED', OUT_OF_STOCK: 'OUT_OF_STOCK', COMING_SOON: 'COMING_SOON' } as const;
+type ProductStatus = typeof ProductStatus[keyof typeof ProductStatus];
 
 // Helper: acepta el booleano ya convertido por NestJS o la cadena "true"/"false"
 const toBool = ({ value }: { value: any }) =>

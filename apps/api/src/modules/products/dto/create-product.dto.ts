@@ -3,7 +3,8 @@ import {
   IsArray, Min, IsEnum, MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProductStatus } from '@prisma/client';
+const ProductStatus = { ACTIVE: 'ACTIVE', INACTIVE: 'INACTIVE', DISCONTINUED: 'DISCONTINUED', OUT_OF_STOCK: 'OUT_OF_STOCK', COMING_SOON: 'COMING_SOON' } as const;
+type ProductStatus = typeof ProductStatus[keyof typeof ProductStatus];
 
 export class CreateProductDto {
   @ApiProperty({ example: 'iPhone 15 Pro Max' })

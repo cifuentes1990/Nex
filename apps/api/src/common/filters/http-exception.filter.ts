@@ -3,7 +3,7 @@ import {
   HttpException, HttpStatus, Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -23,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse() as any;
       message = typeof res === 'string' ? res : res.message || message;
       errors = typeof res === 'object' ? res.errors || null : null;
-    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    } else if (exception instanceof PrismaClientKnownRequestError) {
       status = HttpStatus.BAD_REQUEST;
       this.logger.error(`Prisma error code=${exception.code} meta=${JSON.stringify(exception.meta)} msg=${exception.message}`);
       switch (exception.code) {
