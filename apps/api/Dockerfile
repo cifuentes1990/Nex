@@ -14,7 +14,9 @@ COPY apps/api/package*.json ./apps/api/
 COPY apps/web/package*.json ./apps/web/
 
 # Install all workspaces — deps are hoisted to root node_modules
-RUN npm ci
+# Remove workspace-local node_modules created by npm (prevents BuildKit cache issues)
+RUN npm ci && \
+    rm -rf apps/api/node_modules apps/web/node_modules packages/database/node_modules 2>/dev/null || true
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
