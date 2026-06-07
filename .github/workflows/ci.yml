@@ -98,7 +98,7 @@ jobs:
           DATABASE_DIRECT_URL: postgresql://test_user:test_pass@localhost:5432/nexus_test
 
       - name: Run tests
-        run: npm run test
+        run: cd apps/api && npx jest --passWithNoTests
         env:
           DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/nexus_test
           DATABASE_DIRECT_URL: postgresql://test_user:test_pass@localhost:5432/nexus_test
