@@ -28,6 +28,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXTAUTH_SECRET=build-placeholder-not-used-at-runtime
 ENV NEXTAUTH_URL=http://localhost:3000
 ENV NEXT_PUBLIC_API_URL=http://localhost:4000
+# Give Node.js 4 GB heap — webpack needs it; Docker runner default is too low
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 WORKDIR /app/apps/web
 
