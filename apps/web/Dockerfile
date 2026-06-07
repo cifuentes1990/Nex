@@ -18,9 +18,16 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
+# Root tsconfig is required: apps/web/tsconfig.json extends ../../tsconfig.json
+COPY tsconfig.json ./
 COPY apps/web ./apps/web
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# Placeholder values so NextAuth and API rewrites don't throw during next build
+# (real values are injected at runtime via docker-compose / k8s env)
+ENV NEXTAUTH_SECRET=build-placeholder-not-used-at-runtime
+ENV NEXTAUTH_URL=http://localhost:3000
+ENV NEXT_PUBLIC_API_URL=http://localhost:4000
 
 WORKDIR /app/apps/web
 
