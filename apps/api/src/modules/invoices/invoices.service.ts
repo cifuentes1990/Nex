@@ -287,7 +287,7 @@ export class InvoicesService {
     const invoice = await this.findOne(organizationId, id);
     const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const buffers: Buffer[] = [];
 
