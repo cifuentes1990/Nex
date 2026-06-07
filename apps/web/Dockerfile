@@ -2,45 +2,46 @@
 # Nexus ERP — Web Dockerfile (Multi-stage, Next.js 15)
 # ================================================================
 
-# Stage 1: Dependencies (Alpine — fast, small)
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-
-# Root lock file + workspace manifest (monorepo lock is at root)
-COPY package*.json ./
-COPY apps/web/package*.json ./apps/web/
-
-RUN npm ci --workspace=apps/web --include-workspace-root
-
-# Stage 2: Builder — use full Debian to avoid Alpine musl issues with webpack
-# (Next.js standalone tracing + webpack can hit musl-specific crashes on Alpine)
+# Stage 1: Build — single stage so npm ci and next build share the same
+# Node.js context without cross-stage node_modules copy (avoids symlink issues)
 FROM node:20-bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
-# Root tsconfig is required: apps/web/tsconfig.json extends ../../tsconfig.json
+# Root manifest + lock file (monorepo root)
+COPY package*.json ./
+# Web workspace manifest
+COPY apps/web/package*.json ./apps/web/
+# Root tsconfig required: apps/web/tsconfig.json extends ../../tsconfig.json
 COPY tsconfig.json ./
-COPY package.json ./
+# Web source
 COPY apps/web ./apps/web
 
+# Install dependencies in the same stage as the build so npm workspace context
+# is intact and no cross-stage COPY of node_modules is needed
+RUN npm ci --workspace=apps/web --include-workspace-root
+
+# Build-time env vars (placeholders — real values injected at runtime)
 ENV NEXT_TELEMETRY_DISABLED=1
-# Placeholder values so NextAuth and API rewrites don't throw during next build
-# (real values are injected at runtime via docker-compose / k8s env)
 ENV NEXTAUTH_SECRET=build-placeholder-not-used-at-runtime
 ENV NEXTAUTH_URL=http://localhost:3000
 ENV NEXT_PUBLIC_API_URL=http://localhost:4000
-# Give Node.js 4 GB heap — webpack needs it for large builds
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
 WORKDIR /app/apps/web
 
-# Ensure public dir exists (Next.js requires it; app may not have one yet)
+# Ensure public dir exists (Next.js requires it)
 RUN mkdir -p public
 
 RUN npm run build
 
-# Stage 3: Production (Alpine — smallest possible runtime image)
+# ================================================================
+# Stage 2: Production — minimal Alpine runtime image
+# ================================================================
 FROM node:20-alpine AS production
 
 RUN apk add --no-cache libc6-compat
