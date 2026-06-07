@@ -7,19 +7,22 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Copy only the package manifests needed for the API and its workspace deps
 COPY package*.json ./
 COPY packages/database/package*.json ./packages/database/
 COPY apps/api/package*.json ./apps/api/
 
-# Install only what the API workspace needs (hoisted to root node_modules)
 RUN npm ci --workspace=packages/database --workspace=apps/api --include-workspace-root
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# With npm workspaces, node_modules only exists at the root (hoisted)
+# Dummy DB vars required by Prisma schema validation during generate
+# (no actual DB connection is made at build time)
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV DATABASE_DIRECT_URL=postgresql://build:build@localhost:5432/build
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY packages/database ./packages/database
 COPY apps/api ./apps/api

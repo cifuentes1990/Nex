@@ -1,0 +1,37 @@
+# Dependencies (installed inside Docker)
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+
+# Build outputs
+apps/web/.next
+apps/api/dist
+packages/database/generated
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# CI / docs
+.github
+*.md
+!README.md
+
+# Turbo cache
+.turbo

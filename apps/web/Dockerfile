@@ -2,17 +2,18 @@
 # Nexus ERP — Web Dockerfile (Multi-stage, Next.js 15)
 # ================================================================
 
+# Stage 1: Dependencies
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Root lock file + workspace manifests (monorepo — lock is at root)
+# Root lock file + workspace manifest (monorepo lock is at root)
 COPY package*.json ./
 COPY apps/web/package*.json ./apps/web/
 
 RUN npm ci --workspace=apps/web --include-workspace-root
 
-# ---- Builder ----
+# Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 
@@ -22,9 +23,13 @@ COPY apps/web ./apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web
+
+# Ensure public dir exists (Next.js requires it; app may not have one yet)
+RUN mkdir -p public
+
 RUN npm run build
 
-# ---- Production ----
+# Stage 3: Production
 FROM node:20-alpine AS production
 
 ENV NODE_ENV=production
@@ -36,9 +41,12 @@ RUN adduser --system --uid 1001 nextjs
 
 WORKDIR /app
 
-COPY --from=builder /app/apps/web/public ./public
+# standalone output includes server.js + node_modules snapshot
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+# static files must live at .next/static relative to server.js
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+# public assets (may be empty but dir must exist)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
 
 USER nextjs
 
