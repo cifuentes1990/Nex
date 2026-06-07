@@ -160,29 +160,21 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Check deploy prerequisites
-        id: prereq
+      - name: Deploy via SSH
         run: |
-          if [ -n "$DEPLOY_HOST" ]; then
-            echo "can_deploy=true" >> $GITHUB_OUTPUT
-            echo "✅ Deploy secrets configured — proceeding with SSH deployment"
-          else
-            echo "can_deploy=false" >> $GITHUB_OUTPUT
-            echo "⚠️  DEPLOY_HOST secret not set — skipping SSH deployment (configure secrets to enable)"
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "⚠️  DEPLOY_HOST secret not configured — skipping deployment."
+            echo "    Set DEPLOY_HOST, DEPLOY_USER and DEPLOY_KEY in repo secrets to enable."
+            exit 0
           fi
+          echo "✅ Deploying to $DEPLOY_HOST..."
+          # Write key to temp file
+          echo "$DEPLOY_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /opt/nexus-erp && docker-compose pull && docker-compose up -d --remove-orphans && docker system prune -f && echo '✅ Deployment complete: '$(date)"
+          rm -f /tmp/deploy_key
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-
-      - name: Deploy via SSH
-        if: steps.prereq.outputs.can_deploy == 'true'
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            cd /opt/nexus-erp
-            docker-compose pull
-            docker-compose up -d --remove-orphans
-            docker system prune -f
-            echo "✅ Deployment complete: $(date)"
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
