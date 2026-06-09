@@ -21,7 +21,10 @@ export const metadata: Metadata = {
   creator: 'Nexus ERP',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '48x48' },
+    ],
     apple: '/apple-touch-icon.png',
   },
   openGraph: {

@@ -8,21 +8,24 @@ export class MailService {
   private transporter: nodemailer.Transporter | null = null;
 
   constructor(private config: ConfigService) {
-    const apiKey = this.config.get<string>('RESEND_API_KEY');
+    const host = this.config.get<string>('SMTP_HOST');
+    const pass = this.config.get<string>('SMTP_PASS');
 
-    if (apiKey) {
-      // Resend soporta SMTP estándar — no se necesita SDK extra
+    if (host && pass) {
       this.transporter = nodemailer.createTransport({
-        host: 'smtp.resend.com',
-        port: 465,
-        secure: true,
-        auth: { user: 'resend', pass: apiKey },
+        host,
+        port: this.config.get<number>('SMTP_PORT', 465),
+        secure: this.config.get<number>('SMTP_PORT', 465) === 465,
+        auth: {
+          user: this.config.get<string>('SMTP_USER', 'resend'),
+          pass,
+        },
       });
-      this.logger.log('MailService: Resend SMTP configurado ✅');
+      this.logger.log(`MailService: SMTP configurado (${host}) ✅`);
     } else {
       this.logger.warn(
-        'MailService: RESEND_API_KEY no configurado — los emails no se enviarán. ' +
-        'Obtén una clave gratis en https://resend.com',
+        'MailService: SMTP_HOST / SMTP_PASS no configurados — los emails no se enviarán. ' +
+        'Configura las variables SMTP_* en tu .env (compatible con Resend, SendGrid, Mailgun, etc.)',
       );
     }
   }
@@ -31,8 +34,8 @@ export class MailService {
   async sendPasswordReset(to: string, name: string, token: string): Promise<void> {
     if (!this.transporter) return;
 
-    const appUrl   = this.config.get<string>('APP_URL', 'http://localhost:3000');
-    const from     = this.config.get<string>('MAIL_FROM', 'Nexus ERP <noreply@nexuserp.com>');
+    const appUrl   = this.config.get<string>('NEXT_PUBLIC_APP_URL', 'http://localhost:3000');
+    const from     = this.config.get<string>('SMTP_FROM', 'Nexus ERP <noreply@nexuserp.com>');
     const resetUrl = `${appUrl}/auth/reset-password?token=${token}`;
 
     try {
@@ -52,8 +55,8 @@ export class MailService {
   async sendWelcome(to: string, name: string, orgName: string): Promise<void> {
     if (!this.transporter) return;
 
-    const appUrl = this.config.get<string>('APP_URL', 'http://localhost:3000');
-    const from   = this.config.get<string>('MAIL_FROM', 'Nexus ERP <noreply@nexuserp.com>');
+    const appUrl = this.config.get<string>('NEXT_PUBLIC_APP_URL', 'http://localhost:3000');
+    const from   = this.config.get<string>('SMTP_FROM', 'Nexus ERP <noreply@nexuserp.com>');
 
     try {
       await this.transporter.sendMail({
@@ -72,7 +75,7 @@ export class MailService {
   async sendLowStockAlert(to: string, products: { name: string; stock: number; sku: string }[]): Promise<void> {
     if (!this.transporter || products.length === 0) return;
 
-    const from = this.config.get<string>('MAIL_FROM', 'Nexus ERP <noreply@nexuserp.com>');
+    const from = this.config.get<string>('SMTP_FROM', 'Nexus ERP <noreply@nexuserp.com>');
 
     try {
       await this.transporter.sendMail({

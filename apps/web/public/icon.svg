@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#e0e7ff" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Letter N -->
+  <path
+    d="M120 360V152h52l136 152V152h52v208h-52L172 208v152z"
+    fill="url(#fg)"
+  />
+  <!-- Lightning bolt accent -->
+  <path
+    d="M370 152l-48 96h36l-60 112 12-72h-32l44-136z"
+    fill="white"
+    fill-opacity="0.9"
+  />
+</svg>

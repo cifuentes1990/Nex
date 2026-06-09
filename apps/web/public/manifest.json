@@ -1,18 +1,26 @@
 {
   "name": "Nexus ERP",
   "short_name": "Nexus",
-  "description": "AI-Powered Enterprise Resource Planning System",
+  "description": "AI-Powered Enterprise Business Platform — POS, Inventario, Pedidos y Analítica",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0a0a0f",
+  "background_color": "#09090b",
   "theme_color": "#6366f1",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "lang": "es-CO",
+  "categories": ["business", "finance", "productivity"],
   "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
@@ -21,23 +29,28 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["business", "productivity", "finance"],
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "Dashboard",
-      "url": "/dashboard",
-      "description": "Ver métricas del negocio"
-    },
-    {
-      "name": "POS",
+      "name": "Punto de Venta",
+      "short_name": "POS",
+      "description": "Abrir el módulo de ventas directas",
       "url": "/pos",
-      "description": "Punto de venta"
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
     },
     {
-      "name": "Productos",
-      "url": "/products",
-      "description": "Catálogo de productos"
+      "name": "Pedidos Online",
+      "short_name": "Pedidos",
+      "description": "Ver el pipeline de pedidos a domicilio",
+      "url": "/online-orders",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver métricas del negocio",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
     }
   ]
 }

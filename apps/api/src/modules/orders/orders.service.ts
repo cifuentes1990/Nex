@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma.service';
+import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
@@ -14,8 +15,6 @@ export class OrdersService {
   async create(organizationId: string, branchId: string | null, createdById: string, dto: CreateOrderDto) {
     if (!dto.items?.length) throw new BadRequestException('Order must have at least one item');
 
-    const number = await this.generateOrderNumber(organizationId);
-
     const subtotal = dto.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     const discountAmount = dto.discountAmount ?? 0;
     const taxBase = subtotal - discountAmount;
@@ -29,6 +28,12 @@ export class OrdersService {
     const initialStatus = isPhysical ? 'DELIVERED' : 'PENDING';
 
     const order = await this.prisma.$transaction(async (tx) => {
+      // Advisory lock por organización: serializa la generación de números de orden
+      // pg_advisory_xact_lock se libera automáticamente al terminar la transacción
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${organizationId}::text))`;
+
+      const number = await this.generateOrderNumber(organizationId, tx);
+
       const created = await tx.order.create({
         data: {
           organizationId,
@@ -325,10 +330,14 @@ export class OrdersService {
     }
   }
 
-  private async generateOrderNumber(organizationId: string): Promise<string> {
+  private async generateOrderNumber(
+    organizationId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<string> {
+    const db = tx ?? this.prisma;
     const now = new Date();
     const prefix = `ORD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const count = await this.prisma.order.count({
+    const count = await db.order.count({
       where: { organizationId, number: { startsWith: prefix } },
     });
     return `${prefix}-${String(count + 1).padStart(5, '0')}`;

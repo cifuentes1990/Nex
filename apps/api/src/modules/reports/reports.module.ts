@@ -128,6 +128,61 @@ class ReportsService {
     return this.writeExcel(rows, 'Productos');
   }
 
+  async exportRevenueExcel(orgId: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
+    const from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 86400000);
+    const to   = dateTo   ? new Date(dateTo)   : new Date();
+
+    // Revenue agrupado por categoría de producto
+    const items = await this.prisma.orderItem.findMany({
+      where: {
+        order: {
+          organizationId: orgId,
+          status: { not: 'CANCELLED' },
+          createdAt: { gte: from, lte: to },
+        },
+      },
+      include: {
+        product: { include: { category: { select: { name: true } } } },
+        order:   { select: { createdAt: true, channel: true } },
+      },
+    });
+
+    // Agrupar por categoría
+    const grouped: Record<string, { category: string; revenue: number; cost: number; quantity: number }> = {};
+    for (const item of items) {
+      const cat = item.product?.category?.name ?? 'Sin categoría';
+      if (!grouped[cat]) grouped[cat] = { category: cat, revenue: 0, cost: 0, quantity: 0 };
+      grouped[cat].revenue  += item.total;
+      grouped[cat].cost     += (item.costPrice ?? 0) * item.quantity;
+      grouped[cat].quantity += item.quantity;
+    }
+
+    const rows = Object.values(grouped)
+      .sort((a, b) => b.revenue - a.revenue)
+      .map((g) => ({
+        'Categoría': g.category,
+        'Ingresos ($)': +g.revenue.toFixed(2),
+        'Costo ($)': +g.cost.toFixed(2),
+        'Margen ($)': +(g.revenue - g.cost).toFixed(2),
+        'Margen %': g.revenue > 0 ? +((g.revenue - g.cost) / g.revenue * 100).toFixed(1) : 0,
+        'Unidades vendidas': g.quantity,
+      }));
+
+    // Fila totales
+    const totRevenue = rows.reduce((s, r) => s + r['Ingresos ($)'], 0);
+    const totCost    = rows.reduce((s, r) => s + r['Costo ($)'], 0);
+    rows.push({
+      'Categoría': '── TOTAL ──',
+      'Ingresos ($)': +totRevenue.toFixed(2),
+      'Costo ($)': +totCost.toFixed(2),
+      'Margen ($)': +(totRevenue - totCost).toFixed(2),
+      'Margen %': totRevenue > 0 ? +((totRevenue - totCost) / totRevenue * 100).toFixed(1) : 0,
+      'Unidades vendidas': rows.reduce((s, r) => s + r['Unidades vendidas'], 0),
+    });
+
+    return this.writeExcel(rows, 'Ingresos por categoría');
+  }
+
   async exportInvoicesExcel(orgId: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
     const invoices = await this.prisma.invoice.findMany({
       where: {
@@ -206,7 +261,7 @@ class ReportsController {
 
   @Get('revenue/excel')
   async exportRevenue(@OrgId() o: string, @Query('dateFrom') df: string, @Query('dateTo') dt: string, @Res() res: Response) {
-    const buf = await this.s.exportSalesExcel(o, df, dt);
+    const buf = await this.s.exportRevenueExcel(o, df, dt);
     this.send(res, buf, `ingresos-${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 }

@@ -67,12 +67,17 @@ export default function ProductsPage() {
   });
 
   const exportExcel = async () => {
-    const res = await api.get('/reports/sales/excel', { responseType: 'blob' });
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'productos.xlsx';
-    a.click();
+    try {
+      const res = await api.get('/reports/products/excel', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `productos-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Error al exportar productos');
+    }
   };
 
   const stats = [
