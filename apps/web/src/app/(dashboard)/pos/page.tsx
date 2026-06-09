@@ -6,7 +6,7 @@ import {
   Search, ShoppingCart, Trash2, Plus, Minus, CreditCard,
   Banknote, X, User, Tag, Package, ChevronDown,
   CheckCircle2, ArrowRight, ReceiptText, Smartphone, Store,
-  AlertCircle, ScanLine, RefreshCw, Wifi, WifiOff,
+  AlertCircle, ScanLine, RefreshCw, Wifi, WifiOff, MessageCircle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/formatters';
@@ -226,6 +226,24 @@ export default function POSPage() {
   const taxAmount      = (subtotal - discountAmount) * 0.19;
   const total          = subtotal - discountAmount + taxAmount;
   const totalItems     = cart.reduce((a, i) => a + i.qty, 0);
+
+  // ── Armar mensaje de recibo para WhatsApp ─────────────────────────
+  const buildWhatsAppReceipt = (order: any): string => {
+    const lines = (order.items ?? [])
+      .map((i: any) => `  • ${i.name} x${i.quantity} — ${formatCurrency(i.total ?? i.unitPrice * i.quantity)}`)
+      .join('\n');
+    const greeting = order.customer?.firstName ? ` ${order.customer.firstName}` : '';
+    return [
+      `Hola${greeting}! 👋 Gracias por tu compra.`,
+      '',
+      `🧾 *Pedido:* ${order.number}`,
+      lines ? `\n${lines}` : '',
+      '',
+      `💰 *Total pagado:* ${formatCurrency(order.total)}`,
+      '',
+      '¡Gracias por preferirnos! 🙏',
+    ].join('\n');
+  };
 
   // ── Agregar producto al carrito ────────────────────────────────────
   const addProduct = useCallback((product: any) => {
@@ -659,10 +677,25 @@ export default function POSPage() {
 
             {/* Última venta */}
             {lastOrder && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-semibold">{lastOrder.number}</span>
-                <span className="text-muted-foreground">· {formatCurrency(lastOrder.total)}</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="font-semibold">{lastOrder.number}</span>
+                  <span className="text-muted-foreground">· {formatCurrency(lastOrder.total)}</span>
+                </div>
+
+                {/* Botón WhatsApp — solo si el cliente tiene teléfono */}
+                {lastOrder.customer?.phone && (
+                  <a
+                    href={`https://wa.me/${lastOrder.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppReceipt(lastOrder))}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-2 w-full h-9 rounded-lg bg-emerald-600/10 border border-emerald-600/30 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-600/20 transition-colors"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Enviar recibo por WhatsApp
+                  </a>
+                )}
               </div>
             )}
 

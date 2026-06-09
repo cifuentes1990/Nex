@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { CommandPalette } from '@/components/search/command-palette';
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60_000);
@@ -35,10 +36,23 @@ interface HeaderProps {
 }
 
 export function Header({ onMobileMenuToggle }: HeaderProps) {
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelOpen, setPanelOpen]   = useState(false);
+  const [cmdOpen,   setCmdOpen]     = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const bellRef  = useRef<HTMLButtonElement>(null);
   const qc = useQueryClient();
+
+  /* ── Atajo ⌘K / Ctrl+K para abrir buscador ── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdOpen(v => !v);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   /* ── fetch notifications ── */
   const { data: notifData } = useQuery({
@@ -90,6 +104,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
 
       {/* Command search */}
       <button
+        onClick={() => setCmdOpen(true)}
         className="flex items-center gap-2 px-3 h-9 rounded-lg bg-muted hover:bg-muted/80 text-sm text-muted-foreground transition-colors flex-1 max-w-sm"
       >
         <Search className="h-3.5 w-3.5" />
@@ -235,5 +250,8 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
         )}
       </div>
     </header>
+
+      {/* Buscador global ⌘K */}
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
   );
 }

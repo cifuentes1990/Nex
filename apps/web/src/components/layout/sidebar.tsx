@@ -73,8 +73,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       items: [
         { href: '/online-store', label: 'Tienda Online',  icon: Globe,           show: perms.canManageCatalog },
         { href: '/shipping',     label: 'Envíos',          icon: Bike,            show: perms.canViewInvoices },
-        { href: '/whatsapp',     label: 'WhatsApp Ventas', icon: MessageCircle,   show: perms.canViewAnalytics },
-        { href: '/instagram',    label: 'Instagram Shop',  icon: Instagram,       show: perms.canViewAnalytics },
+        { href: '/whatsapp',     label: 'WhatsApp Ventas', icon: MessageCircle,   show: false }, // próximamente
+        { href: '/instagram',    label: 'Instagram Shop',  icon: Instagram,       show: false }, // próximamente
       ].filter(i => i.show),
     },
     {
@@ -89,7 +89,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       label: 'Inteligencia',
       items: [
         { href: '/ai',          label: 'Asistente IA',     icon: Brain, badge: 'IA',  show: perms.canUseAI },
-        { href: '/automations', label: 'Automatizaciones', icon: Zap,                 show: perms.canManageCatalog },
+        { href: '/automations', label: 'Automatizaciones', icon: Zap,                 show: false }, // próximamente
       ].filter(i => i.show),
     },
     {
