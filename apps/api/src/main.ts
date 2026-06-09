@@ -1,3 +1,15 @@
+import * as Sentry from '@sentry/nestjs';
+
+// Sentry debe inicializarse ANTES de crear la app para capturar todos los errores
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+    release: process.env.npm_package_version,
+  });
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -87,6 +99,11 @@ async function bootstrap() {
 
   logger.log(`🚀 Nexus ERP API running on http://localhost:${port}/api/v1`);
   logger.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
+  if (process.env.SENTRY_DSN) {
+    logger.log(`🔍 Sentry monitoreo activo (${process.env.NODE_ENV})`);
+  } else {
+    logger.warn(`⚠️  Sentry no configurado — agrega SENTRY_DSN en .env para monitoreo en producción`);
+  }
 }
 
 bootstrap();
