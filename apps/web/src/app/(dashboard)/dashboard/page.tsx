@@ -46,20 +46,20 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-auto custom-scroll">
-      <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground text-sm mt-0.5">
               {dayjs().format('dddd, D [de] MMMM YYYY')}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Badge variant="outline" className="gap-1.5 text-emerald-500 border-emerald-500/30 bg-emerald-500/10">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              En vivo
+              <span className="hidden sm:inline">En vivo</span>
             </Badge>
             <Button
               variant="outline"
@@ -69,7 +69,7 @@ export default function DashboardPage() {
               disabled={isFetching}
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-              Actualizar
+              <span className="hidden sm:inline">Actualizar</span>
             </Button>
           </div>
         </div>

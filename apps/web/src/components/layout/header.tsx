@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, Command, Sparkles, CheckCheck, X, ExternalLink } from 'lucide-react';
+import { Bell, Search, Command, Sparkles, CheckCheck, X, ExternalLink, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -30,7 +30,11 @@ const NOTIF_ICON: Record<string, string> = {
   WARNING:      '⚠️',
 };
 
-export function Header() {
+interface HeaderProps {
+  onMobileMenuToggle?: () => void;
+}
+
+export function Header({ onMobileMenuToggle }: HeaderProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const bellRef  = useRef<HTMLButtonElement>(null);
@@ -74,7 +78,16 @@ export function Header() {
   }, [panelOpen]);
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center px-6 gap-4 shrink-0">
+    <header className="h-16 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMobileMenuToggle}
+        className="lg:hidden h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        aria-label="Abrir menú"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
       {/* Command search */}
       <button
         className="flex items-center gap-2 px-3 h-9 rounded-lg bg-muted hover:bg-muted/80 text-sm text-muted-foreground transition-colors flex-1 max-w-sm"
@@ -121,7 +134,7 @@ export function Header() {
         {panelOpen && (
           <div
             ref={panelRef}
-            className="absolute right-0 top-11 w-96 bg-card border border-border rounded-xl shadow-nexus-lg z-50 flex flex-col max-h-[520px] animate-slide-up"
+            className="absolute right-0 top-11 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-card border border-border rounded-xl shadow-nexus-lg z-50 flex flex-col max-h-[520px] animate-slide-up"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">

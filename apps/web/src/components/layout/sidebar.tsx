@@ -27,7 +27,12 @@ const ROLE_LABEL: Record<string, string> = {
   VIEWER: 'Visualizador',
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -36,6 +41,11 @@ export function Sidebar() {
   const perms = usePermissions();
 
   useEffect(() => setMounted(true), []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    onMobileClose?.();
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const NAV_GROUPS = [
     {
@@ -106,7 +116,13 @@ export function Sidebar() {
   return (
     <aside
       style={{ width: collapsed ? 64 : 260 }}
-      className="h-screen bg-card border-r border-border flex flex-col overflow-hidden shrink-0 relative z-30 transition-all duration-300 ease-in-out"
+      className={cn(
+        // Base styles
+        'h-screen bg-card border-r border-border flex flex-col overflow-hidden shrink-0 z-30 transition-all duration-300 ease-in-out',
+        // Mobile: fixed overlay, slides in from left
+        'fixed lg:relative',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+      )}
     >
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-border shrink-0">
@@ -235,10 +251,10 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle — desktop only */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-card border border-border flex items-center justify-center hover:bg-nexus-500 hover:border-nexus-500 hover:text-white transition-all z-40 shadow-sm"
+        className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-card border border-border items-center justify-center hover:bg-nexus-500 hover:border-nexus-500 hover:text-white transition-all z-40 shadow-sm"
       >
         {collapsed
           ? <ChevronRight className="h-3 w-3" />
