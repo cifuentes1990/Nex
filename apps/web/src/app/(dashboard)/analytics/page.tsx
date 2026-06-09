@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart3, TrendingUp, TrendingDown, Users, ShoppingCart,
-  DollarSign, Target, Zap, ArrowUpRight, ArrowDownRight,
+  DollarSign, Target, Zap, ArrowUpRight, ArrowDownRight, Download, Loader2,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -22,6 +22,68 @@ const PERIODS = [
   { label: '30 días', value: 30 },
   { label: '90 días', value: 90 },
 ];
+
+// ── Exportar a Excel ─────────────────────────────────────────────────────
+const EXPORT_TYPES = [
+  { key: 'orders',    label: 'Ventas' },
+  { key: 'products',  label: 'Productos' },
+  { key: 'customers', label: 'Clientes' },
+  { key: 'inventory', label: 'Inventario' },
+] as const;
+
+function ExportButton({ period }: { period: number }) {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleExport = async (type: string) => {
+    setLoading(type);
+    try {
+      const token = document.cookie.split('; ').find(r => r.startsWith('next-auth.session-token='))?.split('=')[1]
+                 ?? localStorage.getItem('accessToken')
+                 ?? '';
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'}/analytics/export?type=${type}&days=${period}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (!res.ok) throw new Error('Error al exportar');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `nexus-${type}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Error al exportar. Intenta de nuevo.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <Button variant="outline" size="sm" className="gap-2" disabled={!!loading}>
+        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        Exportar Excel
+      </Button>
+      <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-20 hidden group-hover:block">
+        {EXPORT_TYPES.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => handleExport(key)}
+            disabled={!!loading}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5 text-muted-foreground" />
+            {label}
+            {loading === key && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState(30);
@@ -127,24 +189,29 @@ export default function AnalyticsPage() {
       <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
             <p className="text-muted-foreground text-sm mt-0.5">Inteligencia de negocio en tiempo real</p>
           </div>
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={cn(
-                  'px-4 py-2 text-sm transition-colors',
-                  period === p.value ? 'bg-nexus-500 text-white' : 'hover:bg-muted',
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            {/* Selector de período */}
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setPeriod(p.value)}
+                  className={cn(
+                    'px-4 py-2 text-sm transition-colors',
+                    period === p.value ? 'bg-nexus-500 text-white' : 'hover:bg-muted',
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {/* Exportar a Excel */}
+            <ExportButton period={period} />
           </div>
         </div>
 

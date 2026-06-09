@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../config/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
 import { RegisterDto } from './dto/register.dto';
@@ -20,6 +21,7 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private audit: AuditLogsService,
+    private mail: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -62,6 +64,7 @@ export class AuthService {
     await this.saveSession(result.user.id, tokens.refreshToken);
 
     this.logger.log(`New registration: ${dto.email} — org: ${result.org.id}`);
+    this.mail.sendWelcome(dto.email, result.user.name, result.org.name).catch(() => {});
 
     // Auditoría — registro de nueva organización
     this.audit.log({
@@ -212,8 +215,9 @@ export class AuthService {
       },
     });
 
-    // TODO: Send email via NotificationsService
-    this.logger.log(`Password reset token created for: ${email}`);
+    // Enviar email real con el enlace de restablecimiento
+    this.mail.sendPasswordReset(email, user.name, token).catch(() => {});
+    this.logger.log(`Password reset email sent to: ${email}`);
     return { message: 'If the email exists, a reset link has been sent' };
   }
 

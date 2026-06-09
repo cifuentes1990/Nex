@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, ParseIntPipe, DefaultValuePipe, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -99,5 +100,28 @@ export class AnalyticsController {
     @Query('period', new DefaultValuePipe(30), ParseIntPipe) period: number,
   ) {
     return this.analyticsService.getTopPerformingProducts(orgId, limit, period);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export data to Excel (.xlsx)' })
+  @ApiQuery({ name: 'type', enum: ['orders', 'products', 'customers', 'inventory'] })
+  @ApiQuery({ name: 'days', required: false, type: Number })
+  async exportExcel(
+    @OrgId() orgId: string,
+    @Query('type') type: 'orders' | 'products' | 'customers' | 'inventory' = 'orders',
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+    @Res() res: Response,
+  ) {
+    const validTypes = ['orders', 'products', 'customers', 'inventory'];
+    const safeType = validTypes.includes(type) ? type : 'orders';
+    const buffer = await this.analyticsService.exportToExcel(orgId, safeType as any, days);
+    const filename = `nexus-${safeType}-${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 }

@@ -92,6 +92,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
   }, [panelOpen]);
 
   return (
+    <>
     <header className="h-16 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
       {/* Hamburger — mobile only */}
       <button
@@ -253,5 +254,6 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
 
       {/* Buscador global ⌘K */}
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+    </>
   );
 }
