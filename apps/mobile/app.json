@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Nexus ERP",
+    "slug": "nexus-erp-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#09090b"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexuserp.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#09090b"
+      },
+      "package": "com.nexuserp.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Nexus ERP necesita la cámara para escanear códigos de barras."
+        }
+      ]
+    ],
+    "scheme": "nexuserp",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
