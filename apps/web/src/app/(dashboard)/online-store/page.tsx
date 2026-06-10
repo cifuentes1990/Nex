@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Instagram, MessageCircle, ShoppingBag, Settings,
   TrendingUp, Zap, CheckCircle2, Loader2, ToggleLeft, ToggleRight,
+  Copy, ExternalLink,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/lib/formatters';
@@ -233,6 +234,35 @@ export default function OnlineStorePage() {
             </button>
           )}
         </div>
+
+        {/* URL pública de la tienda */}
+        {store?.storeUrl && (
+          <div className="nexus-card p-4 flex items-center gap-4">
+            <Globe className="h-4 w-4 text-nexus-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground mb-0.5">URL de tu tienda online</p>
+              <p className="text-sm font-mono font-medium truncate">
+                {typeof window !== 'undefined' ? window.location.origin : ''}/tienda/{store.storeUrl}
+              </p>
+            </div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/tienda/${store.storeUrl}`); toast.success('URL copiada'); }}
+              className="shrink-0 p-2 rounded-lg hover:bg-muted transition-colors"
+              title="Copiar URL"
+            >
+              <Copy className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <a
+              href={`/tienda/${store.storeUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 p-2 rounded-lg hover:bg-muted transition-colors"
+              title="Abrir tienda"
+            >
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            </a>
+          </div>
+        )}
 
         {/* Estadísticas */}
         <ChannelStats />
