@@ -4,7 +4,8 @@
   "private": true,
   "description": "Nexus ERP — Enterprise SaaS Platform with AI",
   "workspaces": [
-    "apps/*",
+    "apps/web",
+    "apps/api",
     "packages/*"
   ],
   "scripts": {
